@@ -23,14 +23,14 @@ pid_t last_child_pid = 0;  // Armazena PID do último processo filho
  * @param background Um ponteiro para um inteiro que será definido como 1 se
  * o comando for em background, e 0 caso contrário.
  */
-void parse_command(char *input, char **args, int *background) {
+void parse_command(char* input, char** args, int* background) {
   // Define o valor padrão para background
   *background = 0;
 
   int i = 0;
 
   // Os delimitadores são espaço (" ") e tabulação ("\t").
-  char *token = strtok(input, " \t");
+  char* token = strtok(input, " \t");
 
   // Percorre a string de entrada enquanto houver tokens.
   while (token != NULL) {
@@ -46,31 +46,46 @@ void parse_command(char *input, char **args, int *background) {
     *background = 1;
     // Remove o "&" da lista de argumentos, substituindo-o por NULL.
     args[i - 1] = NULL;
-  } else {
+  }
+  else {
     // Se não for um comando em background, o array de argumentos deve
     // terminar com NULL. Isso é um requisito para a função execvp().
     args[i] = NULL;
   }
 }
-void execute_command(char **args, int background) {
+void execute_command(char** args, int background) {
   // TODO: Implementar execução
   // Usar fork() e execvp()
   // Gerenciar background se necessário
 }
 
-int is_internal_command(char **args) {
-  // TODO: Verificar se é comando interno
-  // exit, pid, jobs, wait
+int is_internal_command(char** args) {
+
+  if (args[0] == NULL) {
+    return 0;
+  }
+  if (strcmp(args[0], "exit") == 0) {
+    return 1;
+  }
+  if (strcmp(args[0], "pid") == 0) {
+    return 1;
+  }
+  if (strcmp(args[0], "jobs") == 0) {
+    return 1;
+  }
+  if (strcmp(args[0], "wait") == 0) {
+    return 1;
+  }
   return 0;
 }
 
-void handle_internal_command(char **args) {
+void handle_internal_command(char** args) {
   // TODO: Executar comandos internos
 }
 
 int main() {
   char input[MAX_CMD_LEN];
-  char *args[MAX_ARGS];
+  char* args[MAX_ARGS];
   int background;
 
   printf("Mini-Shell iniciado (PID: %d)\n", getpid());
@@ -97,7 +112,8 @@ int main() {
     // Executar comando
     if (is_internal_command(args)) {
       handle_internal_command(args);
-    } else {
+    }
+    else {
       execute_command(args, background);
     }
   }
