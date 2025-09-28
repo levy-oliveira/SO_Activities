@@ -86,39 +86,41 @@ void parse_command(char* input, char** args, int* background) {
     args[i] = NULL;
   }
 }
-void execute_command(char **args, int background) {
-    pid_t pid = fork();
+void execute_command(char** args, int background) {
+  pid_t pid = fork();
 
-    // Tratamento de erro do fork()
-    // Sempre verifique o valor de retorno das chamadas de sistema
-    if (pid < 0) {
-        perror("Erro no fork");
-        return;
+  // Tratamento de erro do fork()
+  // Sempre verifique o valor de retorno das chamadas de sistema
+  if (pid < 0) {
+    perror("Erro no fork");
+    return;
+  }
+
+  if (pid == 0) {
+    // Processo filho
+    // Tenta substituir a imagem do processo com o novo comando
+    if (execvp(args[0], args) == -1) {
+      // Tratamento de erro do execvp()
+      perror("Erro ao executar comando");
+      // Se execvp falhar, é crucial encerrar o processo filho
+      exit(EXIT_FAILURE);
     }
+  }
+  else {
+    // Processo pai
+    // Armazena o PID do último processo filho criado
+    last_child_pid = pid;
 
-    if (pid == 0) {
-        // Processo filho
-        // Tenta substituir a imagem do processo com o novo comando
-        if (execvp(args[0], args) == -1) {
-            // Tratamento de erro do execvp()
-            perror("Erro ao executar comando");
-            // Se execvp falhar, é crucial encerrar o processo filho
-            exit(EXIT_FAILURE); 
-        }
-    } else {
-        // Processo pai
-        // Armazena o PID do último processo filho criado
-        last_child_pid = pid; 
-
-        if (background) {
-            // Background: Não aguarda, apenas armazena o PID para gerenciamento futuro
-            add_bg_process(pid);
-            printf("[%d] %d\n", bg_count, pid);
-        } else {
-            // Foreground: aguarda o término do processo filho específico
-            waitpid(pid, NULL, 0); 
-        }
+    if (background) {
+      // Background: Não aguarda, apenas armazena o PID para gerenciamento futuro
+      add_bg_process(pid);
+      printf("[%d] %d\n", bg_count, pid);
     }
+    else {
+      // Foreground: aguarda o término do processo filho específico
+      waitpid(pid, NULL, 0);
+    }
+  }
 }
 
 int is_internal_command(char** args) {
@@ -142,7 +144,57 @@ int is_internal_command(char** args) {
 }
 
 void handle_internal_command(char** args) {
-  // TODO: Executar comandos internos
+  // Percorre a string de entrada
+  int i = 0;
+  while (args[i] != NULL) {
+    if (strcmp(args[i], "exit") == 0) {
+      // Se um dos elementos for igual a "exit", encerra-se o minishell
+      printf("Mini-Shell encerrado com status 0 \n");
+      exit(0);
+    }
+    else if (strcmp(args[i], "pid") == 0) {
+      // Se um dos elementos for "pid", imprime o PID do shell e do último filho
+      printf("PID do shell: %5d\n", getpid());
+      if (last_child_pid > 0) {
+        printf("PID do último filho: %d\n", last_child_pid);
+      }
+    }
+    else if (strcmp(args[0], "jobs") == 0) {
+      if (bg_count == 0) {
+        printf("Nenhum processo em background\n");
+      }
+      else {
+        printf("Processos em background:\n");
+        for (int i = 0; i < bg_count; i++) {
+          printf("[%d] %d Running\n", i + 1, bg_processes[i]);
+        }
+      }
+    }
+    else if (strcmp(args[0], "wait") == 0) {
+      printf("Aguardando processos em background...\n");
+      while (bg_count > 0) {
+        int status;
+        pid_t pid = wait(&status); // Bloqueia até um processo terminar
+        if (pid > 0) {
+          // Procurar o pid na lista
+          for (int i = 0; i < bg_count; i++) {
+            if (bg_processes[i] == pid) {
+              // Desloca todos os elementos para "fechar o buraco"
+              for (int j = i; j < bg_count - 1; j++) {
+                bg_processes[j] = bg_processes[j + 1];
+              }
+              bg_count--;
+              break;
+            }
+          }
+          printf("Processo %d terminou.\n", pid);
+        }
+      }
+      printf("Todos os processos terminaram\n");
+    }
+
+    i++;
+  }
 }
 
 int main() {
