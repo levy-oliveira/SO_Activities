@@ -12,6 +12,39 @@ pid_t bg_processes[10];
 int bg_count = 0;
 pid_t last_child_pid = 0;  // Armazena PID do último processo filho
 
+void add_bg_process(pid_t pid)
+{
+  if (bg_count < 10)
+  {
+    bg_processes[bg_count++] = pid;
+  }
+}
+
+void clean_finished_processes()
+{
+  int status;
+  pid_t pid;
+  // WNOHANG = não bloqueia se nenhum processo terminou
+  while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+  {
+    // Remove da lista de background
+    for (int i = 0; i < bg_count; i++)
+    {
+      if (bg_processes[i] == pid)
+      {
+        printf("[%d]+ Done\n", i + 1);
+        // Remove elemento da lista
+        for (int j = i; j < bg_count - 1; j++)
+        {
+          bg_processes[j] = bg_processes[j + 1];
+        }
+        bg_count--;
+        break;
+      }
+    }
+  }
+}
+
 /**
  * @brief Divide a string de entrada em um comando e seus argumentos.
  * Esta função utiliza strtok() para dividir a string 'input' em tokens
@@ -53,10 +86,39 @@ void parse_command(char* input, char** args, int* background) {
     args[i] = NULL;
   }
 }
-void execute_command(char** args, int background) {
-  // TODO: Implementar execução
-  // Usar fork() e execvp()
-  // Gerenciar background se necessário
+void execute_command(char **args, int background) {
+    pid_t pid = fork();
+
+    // Tratamento de erro do fork()
+    // Sempre verifique o valor de retorno das chamadas de sistema
+    if (pid < 0) {
+        perror("Erro no fork");
+        return;
+    }
+
+    if (pid == 0) {
+        // Processo filho
+        // Tenta substituir a imagem do processo com o novo comando
+        if (execvp(args[0], args) == -1) {
+            // Tratamento de erro do execvp()
+            perror("Erro ao executar comando");
+            // Se execvp falhar, é crucial encerrar o processo filho
+            exit(EXIT_FAILURE); 
+        }
+    } else {
+        // Processo pai
+        // Armazena o PID do último processo filho criado
+        last_child_pid = pid; 
+
+        if (background) {
+            // Background: Não aguarda, apenas armazena o PID para gerenciamento futuro
+            add_bg_process(pid);
+            printf("[%d] %d\n", bg_count, pid);
+        } else {
+            // Foreground: aguarda o término do processo filho específico
+            waitpid(pid, NULL, 0); 
+        }
+    }
 }
 
 int is_internal_command(char** args) {
@@ -92,6 +154,9 @@ int main() {
   printf("Digite 'exit' para sair\n\n");
 
   while (1) {
+    // Limpa processos terminados
+    clean_finished_processes();
+
     printf("minishell> ");
     fflush(stdout);
     // Ler entrada do usuário
