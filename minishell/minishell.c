@@ -142,7 +142,23 @@ int is_internal_command(char** args) {
 }
 
 void handle_internal_command(char** args) {
-  // TODO: Executar comandos internos
+  // Percorre a string de entrada
+  int i=0;
+    while (args[i] != NULL) {
+    if(strcmp(args[i], "exit") == 0) {
+      // Se um dos elementos for igual a "exit", encerra-se o minishell
+      printf("Mini-Shell encerrado com status 0 \n");
+      exit(0);
+    }
+    else if(strcmp(args[i], "pid") == 0){
+      // Se um dos elementos for "pid", imprime o PID do shell e do último filho
+      printf("PID do shell: %5d\n", getpid());
+      if (last_child_pid > 0) {
+            printf("PID do último filho: %d\n", last_child_pid);
+        }
+    }    
+    i++;
+  }
 }
 
 int main() {
