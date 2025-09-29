@@ -123,6 +123,8 @@ void execute_command(char** args, int background) {
   }
 }
 
+// verifica se o comando é interno (exit, pid, jobs, wait)
+// Caso seja, retorna 1, senão retorna 0
 int is_internal_command(char** args) {
 
   if (args[0] == NULL) {
@@ -160,6 +162,7 @@ void handle_internal_command(char** args) {
       }
     }
     else if (strcmp(args[0], "jobs") == 0) {
+      // Se um dos elementos for igual a "jobs", lista os processos em background
       if (bg_count == 0) {
         printf("Nenhum processo em background\n");
       }
@@ -171,6 +174,7 @@ void handle_internal_command(char** args) {
       }
     }
     else if (strcmp(args[0], "wait") == 0) {
+      // Se um dos elementos for igual a "wait", aguarda os processos em background
       printf("Aguardando processos em background...\n");
       while (bg_count > 0) {
         int status;
