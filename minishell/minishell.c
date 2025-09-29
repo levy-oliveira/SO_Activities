@@ -189,12 +189,11 @@ void handle_internal_command(char** args) {
           }
           printf("Processo %d terminou.\n", pid);
         }
-      }
-      printf("Todos os processos terminaram\n");
+      }   
     }
-
     i++;
   }
+  printf("Todos os processos terminaram\n");
 }
 
 int main() {
