@@ -1,0 +1,21 @@
+# Ignorar arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar pastas de IDE e logs
+.vscode/
+.idea/
+*.log
+
+# --- Regras do Front-end ---
+front-end/node_modules/
+front-end/dist/
+front-end/.env.local
+front-end/.env.*.local
+
+# --- Regras do Back-end ---
+back-end/node_modules/
+back-end/dist/
+back-end/.env
+
+node_modules/
