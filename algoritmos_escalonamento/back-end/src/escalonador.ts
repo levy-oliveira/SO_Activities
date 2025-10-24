@@ -137,8 +137,75 @@ export function simularRR(entradaProcessos: ProcessoEntrada[], config: Configura
   if (!config.quantum || config.quantum <= 0) {
       throw new Error("Quantum inválido ou não fornecido para Round-Robin.");
   }
-  // TODO: Implementar RR.
-  throw new Error(ERRO_NAO_IMPLEMENTADO);
+
+  const processos: Processo[] = entradaProcessos
+    .map((p, index) => criarProcesso(p, index + 1))
+    .sort((a, b) => a.creationTime - b.creationTime); // Ordena por chegada
+
+  let tempoAtual = 0;
+  let processosConcluidosCont = 0;
+  let processoAtual: Processo | null = null;
+  let trocasContexto = 0; 
+  let filaDeProntos: Processo[] = [];
+  let processosConcluidos: Processo[] = [];
+  const diagramaTempo: { time: number; processId: number | null }[] = [];
+  const poolDeChegada = []; // Cópia para consumir
+  const quantum = config.quantum;
+
+  
+  while (processosConcluidosCont < processos.length){
+    //processos.forEach((p) => {
+    // if(p.creationTime === tempoAtual){ 
+    //   filaDeProntos.push(p);
+    //   processos.shift();
+    // }
+    // });
+
+    while (processos.length > 0 && processos[0].creationTime <= tempoAtual) {
+      filaDeProntos.push(processos.shift()!);
+    }
+
+    if(filaDeProntos.length > 0){
+      const escolhido = filaDeProntos.shift();
+
+      if (escolhido) { // Verifica se existe um processo
+        trocasContexto++;
+        diagramaTempo.push({ time: tempoAtual, processId: escolhido ? escolhido.id : null });
+        escolhido.waitingTime = tempoAtual - escolhido.creationTime;
+        for(let q = quantum; q > 0; q--){
+          while (processos.length > 0 && processos[0].creationTime <= tempoAtual) {
+            filaDeProntos.push(processos.shift()!);
+          }
+          tempoAtual++;
+        }
+        escolhido.remainingTime -= quantum; // ou o tempo que foi realmente executado
+
+        if(escolhido.remainingTime > 0) {
+          filaDeProntos.push(escolhido);
+        }
+        else {
+          processosConcluidosCont++;
+          escolhido.completionTime = tempoAtual;
+          escolhido.turnaroundTime = escolhido.completionTime - escolhido.creationTime;
+          processosConcluidos.push(escolhido);
+        }
+      }
+    }
+
+  }
+  
+  const totalTurnaround = processosConcluidos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
+  const totalWaiting = processosConcluidos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
+  
+  return {
+    metricas: {
+      averageTurnaroundTime: totalTurnaround / processosConcluidos.length,
+      averageWaitingTime: totalWaiting / processosConcluidos.length,
+      totalContextSwitches: trocasContexto,
+    },
+    diagramaTempo: diagramaTempo,
+    processos: processosConcluidos,
+  };
 }
 
 /**

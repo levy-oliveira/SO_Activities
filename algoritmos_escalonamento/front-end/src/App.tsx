@@ -8,6 +8,8 @@ import type {
   ConfiguracaoEscalonador 
 } from './interfaces'; // importação de tipos
 import GanttChart from './GanttChart'; 
+import { getColor } from './GanttChart';
+
 
 // Define os algoritmos e quais inputs eles precisam
 const algoritmos = [
@@ -28,6 +30,8 @@ function App() {
   const [creationTime, setCreationTime] = useState(0);
   const [duration, setDuration] = useState(1);
   const [priority, setPriority] = useState(1);
+  const [removingId, setRemovingId] = useState<number | null>(null); // Estado para controle de remoção
+
 
   // --- Estados da Simulação ---
   const [processList, setProcessList] = useState<ProcessoLocal[]>([]); 
@@ -60,7 +64,17 @@ function App() {
   };
 
   const handleRemoveProcess = (idToRemove: number) => {
-    setProcessList(processList.filter((p) => p.id !== idToRemove));
+    setRemovingId(idToRemove); // Define o ID do processo a ser removido
+    setTimeout(() => {
+      const filteredList = processList.filter((p) => p.id !== idToRemove);
+      setNextId(nextId - 1);
+      const updatedList = filteredList.map((p) => ({
+          ...p,
+          id: p.id > idToRemove ? p.id - 1 : p.id
+      }));
+      setProcessList(updatedList);
+      setRemovingId(null); // Reseta o ID após a remoção
+    }, 300); // Tempo para a animação
   };
 
   const handleSimulate = async () => {
@@ -155,8 +169,8 @@ function App() {
           <ul className="process-list">
             {processList.length === 0 && <small>Nenhum processo adicionado.</small>}
             {processList.map((p) => (
-              <li key={p.id} className="process-list-item">
-                <span>
+            <li key={p.id} className={`process-list-item ${removingId === p.id ? 'removing' : ''}`}>
+                <span style={{ color: getColor(p.id) }}>
                   P{p.id} (Chegada: {p.creationTime}, Duração: {p.duration}, Prioridade: {p.priority})
                 </span>
                 <button
