@@ -20,7 +20,8 @@ export interface Processo {
   duration: number;
   priority: number;
   remainingTime: number; // Tempo restante
-  
+  startTime?: number | null; // Tempo em que iniciou pela primeira vez (opcional)
+
   // Métricas de resultado
   completionTime?: number;  // Tempo de conclusão
   waitingTime?: number;     // Tempo de espera
@@ -44,8 +45,8 @@ export interface ResultadoSimulacao {
  * Interface para configurações extras (ex: Quantum para RR).
  */
 export interface ConfiguracaoEscalonador {
-    quantum?: number;
-    agingRate?: number; // Taxa de envelhecimento
+  quantum?: number;
+  agingRate?: number; // Taxa de envelhecimento
 }
 
 /**
@@ -58,5 +59,6 @@ export function criarProcesso(entrada: ProcessoEntrada, id: number): Processo {
     duration: entrada.duration,
     priority: entrada.priority,
     remainingTime: entrada.duration, // Tempo restante inicial é a duração total
+    startTime: null,
   };
 }
