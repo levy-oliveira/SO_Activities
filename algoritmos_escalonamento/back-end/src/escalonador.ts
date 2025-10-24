@@ -299,16 +299,165 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
  * Simula o algoritmo de Prioridade (Não Preemptivo).
  */
 export function simularPrioridadeNP(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // TODO: Implementar Prioridade NP.
-  throw new Error(ERRO_NAO_IMPLEMENTADO);
+  // 1. Inicialização e ordenação por tempo de chegada
+  const processos: Processo[] = entradaProcessos
+    .map((p, index) => criarProcesso(p, index + 1))
+    .sort((a, b) => a.creationTime - b.creationTime);
+
+  // 2. Setup da Simulação
+  let tempoAtual = 0;
+  let processosConcluidosCont = 0;
+  let processoAtual: Processo | null = null;
+  let trocasContexto = 0; // Mantido como no FCFS para consistência
+  const filaDeProntos: Processo[] = [];
+  const diagramaTempo: { time: number; processId: number | null }[] = [];
+  const poolDeChegada = [...processos];
+
+  // 3. Loop Principal
+  while (processosConcluidosCont < processos.length) {
+    
+    // Adiciona processos que chegaram na fila de prontos
+    while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
+      filaDeProntos.push(poolDeChegada.shift()!);
+    }
+
+    // Se a CPU está livre e há processos prontos...
+    if (processoAtual === null && filaDeProntos.length > 0) {
+      // ...ordena a fila pela prioridade para encontrar o melhor candidato
+      filaDeProntos.sort((a, b) => b.priority - a.priority);
+      processoAtual = filaDeProntos.shift()!;
+      processoAtual.waitingTime = tempoAtual - processoAtual.creationTime;
+    }
+
+    diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
+
+    // Executa o processo atual
+    if (processoAtual !== null) {
+      processoAtual.remainingTime--;
+
+      // Se o processo terminou
+      if (processoAtual.remainingTime === 0) {
+        processoAtual.completionTime = tempoAtual + 1;
+        processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
+        processosConcluidosCont++;
+        processoAtual = null; // Libera a CPU
+      }
+    }
+
+    tempoAtual++;
+
+    // Avança o tempo se a CPU estiver ociosa
+    if (processoAtual === null && filaDeProntos.length === 0 && poolDeChegada.length > 0) {
+      if (tempoAtual < poolDeChegada[0].creationTime) {
+        const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
+        for (let i = 0; i < tempoOcioso; i++) {
+            diagramaTempo.push({ time: tempoAtual + i, processId: null });
+        }
+        tempoAtual = poolDeChegada[0].creationTime;
+      }
+    }
+
+    if (tempoAtual > 100000) break; // Trava de segurança
+  }
+
+  // Cálculo de Métricas Finais
+  const totalTurnaround = processos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
+  const totalWaiting = processos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
+  
+  return {
+    metricas: {
+      averageTurnaroundTime: totalTurnaround / processos.length,
+      averageWaitingTime: totalWaiting / processos.length,
+      totalContextSwitches: trocasContexto,
+    },
+    diagramaTempo: diagramaTempo,
+    processos: processos,
+  };
 }
 
 /**
  * Simula o algoritmo de Prioridade (Preemptivo).
+ * Um novo processo pode interromper o atual se tiver prioridade maior.
  */
 export function simularPrioridadeP(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // TODO: Implementar Prioridade P.
-  throw new Error(ERRO_NAO_IMPLEMENTADO);
+  const processos: Processo[] = entradaProcessos
+    .map((p, index) => criarProcesso(p, index + 1));
+
+  let tempoAtual = 0;
+  let processosConcluidosCont = 0;
+  let processoAtual: Processo | null = null;
+  const filaDeProntos: Processo[] = [];
+  const diagramaTempo: { time: number; processId: number | null }[] = [];
+  const poolDeProcessos = [...processos]; 
+  let trocasContexto = 0;
+  let ultimoProcessoId: number | null = null;
+
+  while (processosConcluidosCont < processos.length) {
+    // Adiciona à fila de prontos todos os processos que já chegaram
+    for (let i = poolDeProcessos.length - 1; i >= 0; i--) {
+        if (poolDeProcessos[i].creationTime <= tempoAtual) {
+            filaDeProntos.push(poolDeProcessos.splice(i, 1)[0]);
+        }
+    }
+
+    // Se um processo estava em execução, ele volta para a fila para competir novamente
+    if (processoAtual) {
+        filaDeProntos.push(processoAtual);
+        processoAtual = null;
+    }
+
+    // Se há processos na fila, escolhe o de maior prioridade
+    if (filaDeProntos.length > 0) {
+        filaDeProntos.sort((a, b) => b.priority - a.priority);
+        processoAtual = filaDeProntos.shift()!;
+    }
+
+    // Contabiliza troca de contexto
+    if (processoAtual?.id !== ultimoProcessoId) {
+        if (ultimoProcessoId !== null && processoAtual !== null) {
+            trocasContexto++;
+        }
+        ultimoProcessoId = processoAtual?.id ?? null;
+    }
+    
+    diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
+
+    // Executa o processo por 1 unidade de tempo
+    if (processoAtual) {
+      processoAtual.remainingTime--;
+      if (processoAtual.remainingTime === 0) {
+        processoAtual.completionTime = tempoAtual + 1;
+        processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
+        processosConcluidosCont++;
+        processoAtual = null; 
+        ultimoProcessoId = null;
+      }
+    }
+    
+    tempoAtual++;
+
+    if (tempoAtual > 100000) break; // Trava de segurança
+  }
+  
+  // Cálculo final das métricas
+  processos.forEach(p => {
+      if(p.turnaroundTime !== undefined) {
+          p.waitingTime = p.turnaroundTime - p.duration;
+      }
+  });
+
+  const totalTurnaround = processos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
+  const totalWaiting = processos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
+
+  return {
+    metricas: {
+      averageTurnaroundTime: totalTurnaround / processos.length,
+      averageWaitingTime: totalWaiting / processos.length,
+      totalContextSwitches: trocasContexto,
+    },
+    diagramaTempo: diagramaTempo,
+    processos: processos,
+  };
 }
 
 /**
