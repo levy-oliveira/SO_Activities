@@ -561,13 +561,10 @@ export function simularRR(entradaProcessos: ProcessoEntrada[], config: Configura
  * Simula o algoritmo Round-Robin com Prioridade e Envelhecimento (Aging).
  */
 export function simularPrioridadeRR(entradaProcessos: ProcessoEntrada[], config: ConfiguracaoEscalonador): ResultadoSimulacao {
-<<<<<<< HEAD
+
   if (!config.quantum || config.quantum <= 0) {
     throw new Error("Quantum inválido ou não fornecido.");
   }
-  // TODO: Implementar RR com Prioridade e Aging.
-  throw new Error(ERRO_NAO_IMPLEMENTADO);
-=======
  
   if (!config.quantum || config.quantum <= 0) {
       throw new Error("Quantum inválido ou não fornecido para Round-Robin.");
@@ -682,5 +679,4 @@ export function simularPrioridadeRR(entradaProcessos: ProcessoEntrada[], config:
     diagramaTempo: diagramaTempo,
     processos: processosConcluidos,
   };
->>>>>>> feature/RR
 }
