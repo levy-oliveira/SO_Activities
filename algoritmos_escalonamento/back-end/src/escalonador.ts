@@ -16,12 +16,12 @@ import {
  * Os processos são atendidos na ordem em que chegam.
  */
 export function simularFCFS(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // 1. Inicialização e 2. Ordenação
+  // Inicialização e Ordenação
   const processos: Processo[] = entradaProcessos
     .map((p, index) => criarProcesso(p, index + 1))
     .sort((a, b) => a.creationTime - b.creationTime); // Ordena por chegada
 
-  // 3. Setup da Simulação
+  // Setup da Simulação
   let tempoAtual = 0;
   let processosConcluidosCont = 0;
   let processoAtual: Processo | null = null;
@@ -30,15 +30,15 @@ export function simularFCFS(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
   const diagramaTempo: { time: number; processId: number | null }[] = [];
   const poolDeChegada = [...processos]; // Cópia para consumir
 
-  // 4. Loop Principal
+  // Loop Principal
   while (processosConcluidosCont < processos.length) {
 
-    // 5. Adicionar Chegadas
+    // Adicionar Chegadas
     while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
       filaDeProntos.push(poolDeChegada.shift()!);
     }
 
-    // 6. Escolha do Processo
+    // Escolha do Processo
     if (processoAtual === null && filaDeProntos.length > 0) {
       processoAtual = filaDeProntos.shift()!;
       processoAtual.waitingTime = tempoAtual - processoAtual.creationTime;
@@ -48,11 +48,11 @@ export function simularFCFS(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
     // Registra o diagrama de tempo
     diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
 
-    // 7. Execução
+    // Execução
     if (processoAtual !== null) {
       processoAtual.remainingTime--;
 
-      // 8. Término do Processo
+      // Término do Processo
       if (processoAtual.remainingTime === 0) {
         processoAtual.completionTime = tempoAtual + 1;
         processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
@@ -63,7 +63,7 @@ export function simularFCFS(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
 
     tempoAtual++;
 
-    // 9. Tempo Ocioso
+    // Tempo Ocioso
     if (processoAtual === null && filaDeProntos.length === 0 && poolDeChegada.length > 0) {
       if (tempoAtual < poolDeChegada[0].creationTime) {
         const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
@@ -77,11 +77,11 @@ export function simularFCFS(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
     if (tempoAtual > 100000) break; // Trava de segurança
   }
 
-  // 10. Cálculo de Métricas
+  // Cálculo de Métricas
   const totalTurnaround = processos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
   const totalWaiting = processos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
 
-  // 11. Retorno
+  // Retorno
   return {
     metricas: {
       averageTurnaroundTime: totalTurnaround / processos.length,
@@ -103,12 +103,12 @@ const ERRO_NAO_IMPLEMENTADO = "Algoritmo não implementado.";
  * Simula o algoritmo Shortest Job First (SJF) (Não Preemptivo).
  */
 export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // 1. Inicialização e 2. Ordenação
+  // Inicialização e Ordenação
   const processos: Processo[] = entradaProcessos
     .map((p, index) => criarProcesso(p, index + 1))
     .sort((a, b) => a.creationTime - b.creationTime); // Ordena por chegada
 
-  // 3. Setup da Simulação
+  // Setup da Simulação
   let tempoAtual = 0;
   let processosConcluidosCont = 0;
   let processoAtual: Processo | null = null;
@@ -117,15 +117,15 @@ export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimula
   const diagramaTempo: { time: number; processId: number | null }[] = [];
   const poolDeChegada = [...processos]; // Cópia para consumir
 
-  // 4. Loop Principal
+  // Loop Principal
   while (processosConcluidosCont < processos.length) {
 
-    // 5. Adicionar todos os processos que chegaram até o tempo atual
+    // Adicionar todos os processos que chegaram até o tempo atual
     while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
       filaDeProntos.push(poolDeChegada.shift()!);
     }
 
-    // 6. Escolha do processo (SJF: menor burst entre os prontos)
+    // Escolha do processo (SJF: menor burst entre os prontos)
     if (processoAtual === null && filaDeProntos.length > 0) {
       // Ordena primeiro pelo tempo restante/duração (SJF), depois por tempo de chegada (desempate)
       // Nota: o objeto Processo usa `duration` e `remainingTime` (não `burstTime`).
@@ -139,14 +139,14 @@ export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimula
       trocasContexto++;
     }
 
-    // 7. Registrar diagrama de tempo
+    // Registrar diagrama de tempo
     diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
 
-    // 8. Executar processo atual
+    // Executar processo atual
     if (processoAtual !== null) {
       processoAtual.remainingTime--;
 
-      // 9. Verificar término
+      // Verificar término
       if (processoAtual.remainingTime === 0) {
         processoAtual.completionTime = tempoAtual + 1;
         processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
@@ -155,10 +155,10 @@ export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimula
       }
     }
 
-    // 10. Avançar tempo
+    // Avançar tempo
     tempoAtual++;
 
-    // 11. Se não há processo em execução e nem pronto, pular tempo ocioso até o próximo processo
+    // Se não há processo em execução e nem pronto, pular tempo ocioso até o próximo processo
     if (processoAtual === null && filaDeProntos.length === 0 && poolDeChegada.length > 0) {
       if (tempoAtual < poolDeChegada[0].creationTime) {
         const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
@@ -169,15 +169,15 @@ export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimula
       }
     }
 
-    // 12. Trava de segurança
+    // Trava de segurança
     if (tempoAtual > 100000) break;
   }
 
-  // 13. Cálculo de Métricas
+  // Cálculo de Métricas
   const totalTurnaround = processos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
   const totalWaiting = processos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
 
-  // 14. Retorno final
+  // Retorno final
   return {
     metricas: {
       averageTurnaroundTime: totalTurnaround / processos.length,
@@ -194,12 +194,12 @@ export function simularSJF(entradaProcessos: ProcessoEntrada[]): ResultadoSimula
  * Simula o algoritmo Shortest Remaining Time First (SRTF) (Preemptivo).
  */
 export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // 1. Inicialização e 2. Ordenação por tempo de chegada
+  // Inicialização e Ordenação por tempo de chegada
   const processos: Processo[] = entradaProcessos
     .map((p, index) => criarProcesso(p, index + 1))
     .sort((a, b) => a.creationTime - b.creationTime);
 
-  // 3. Setup da simulação
+  // Setup da simulação
   let tempoAtual = 0;
   let processosConcluidosCont = 0;
   let processoAtual: Processo | null = null;
@@ -208,14 +208,14 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
   const diagramaTempo: { time: number; processId: number | null }[] = [];
   const poolDeChegada = [...processos];
 
-  // 4. Loop principal
+  // Loop principal
   while (processosConcluidosCont < processos.length) {
-    // 5. Adicionar processos que chegaram até o tempo atual
+    // Adicionar processos que chegaram até o tempo atual
     while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
       filaDeProntos.push(poolDeChegada.shift()!);
     }
 
-    // 6. Escolha do processo com menor tempo restante (SRTF - preemptivo)
+    // Escolha do processo com menor tempo restante (SRTF - preemptivo)
     if (filaDeProntos.length > 0) {
       // Ordena por remainingTime (e desempata por criação)
       filaDeProntos.sort((a, b) => {
@@ -247,14 +247,14 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
       }
     }
 
-    // 7. Registrar diagrama
+    // Registrar diagrama
     diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
 
-    // 8. Executar processo atual (se existir)
+    // Executar processo atual (se existir)
     if (processoAtual !== null) {
       processoAtual.remainingTime--;
 
-      // 9. Verificar término
+      // Verificar término
       if (processoAtual.remainingTime === 0) {
         processoAtual.completionTime = tempoAtual + 1;
         processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
@@ -265,7 +265,7 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
 
     tempoAtual++;
 
-    // 10. Tempo ocioso (sem processo pronto)
+    // Tempo ocioso (sem processo pronto)
     if (processoAtual === null && filaDeProntos.length === 0 && poolDeChegada.length > 0) {
       if (tempoAtual < poolDeChegada[0].creationTime) {
         const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
@@ -279,11 +279,11 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
     if (tempoAtual > 100000) break; // trava de segurança
   }
 
-  // 11. Calcular métricas
+  // Calcular métricas
   const totalTurnaround = processos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
   const totalWaiting = processos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
 
-  // 12. Retornar resultado
+  // Retornar resultado
   return {
     metricas: {
       averageTurnaroundTime: totalTurnaround / processos.length,
@@ -299,12 +299,12 @@ export function simularSRTF(entradaProcessos: ProcessoEntrada[]): ResultadoSimul
  * Simula o algoritmo de Prioridade (Não Preemptivo).
  */
 export function simularPrioridadeNP(entradaProcessos: ProcessoEntrada[]): ResultadoSimulacao {
-  // 1. Inicialização e ordenação por tempo de chegada
+  // Inicialização e ordenação por tempo de chegada
   const processos: Processo[] = entradaProcessos
     .map((p, index) => criarProcesso(p, index + 1))
     .sort((a, b) => a.creationTime - b.creationTime);
 
-  // 2. Setup da Simulação
+  // Setup da Simulação
   let tempoAtual = 0;
   let processosConcluidosCont = 0;
   let processoAtual: Processo | null = null;
@@ -313,7 +313,7 @@ export function simularPrioridadeNP(entradaProcessos: ProcessoEntrada[]): Result
   const diagramaTempo: { time: number; processId: number | null }[] = [];
   const poolDeChegada = [...processos];
 
-  // 3. Loop Principal
+  // Loop Principal
   while (processosConcluidosCont < processos.length) {
     
     // Adiciona processos que chegaram na fila de prontos
