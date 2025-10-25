@@ -9,7 +9,7 @@ interface GanttBlock {
   duration: number;
   startTime: number;
 }
-const getColor = (id: number | null) => {
+export const getColor = (id: number | null) => {
   if (id === null) return '#333'; 
   const colors = [
     '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',

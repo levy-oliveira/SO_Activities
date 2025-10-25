@@ -18,7 +18,8 @@ export interface Processo {
   id: number;
   creationTime: number;
   duration: number;
-  priority: number;
+  priority: number; //prioridade inicial
+  priorityMod: number; //prioridade que aumenta com o tempo
   remainingTime: number; // Tempo restante
   startTime?: number | null; // Tempo em que iniciou pela primeira vez (opcional)
 
@@ -58,6 +59,7 @@ export function criarProcesso(entrada: ProcessoEntrada, id: number): Processo {
     creationTime: entrada.creationTime,
     duration: entrada.duration,
     priority: entrada.priority,
+    priorityMod: entrada.priority,
     remainingTime: entrada.duration, // Tempo restante inicial é a duração total
     startTime: null,
   };
