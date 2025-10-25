@@ -5,7 +5,8 @@ import type {
   ResultadoSimulacao 
 } from './interfaces'; // importação de tipos
 
-const API_BASE_URL = 'http://localhost:3001/api/simulate';
+// front-end/src/api.ts
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/simulate';
 
 // ... (todo o resto do arquivo permanece igual)
 export async function executarSimulacao(

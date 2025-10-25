@@ -26,8 +26,9 @@ const app = express();
 const port = 3001;
 
 // --- Middlewares ---
-// Permite que o front-end (rodando na porta 5173) acesse esta API
-app.use(cors({ origin: 'http://localhost:5173' })); 
+// backend/src/index.ts
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+app.use(cors({ origin: allowedOrigin }));
 // Permite que o servidor entenda JSON enviado no corpo das requisições
 app.use(express.json()); 
 
