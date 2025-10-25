@@ -468,58 +468,77 @@ export function simularRR(entradaProcessos: ProcessoEntrada[], config: Configura
     throw new Error("Quantum inválido ou não fornecido para Round-Robin.");
   }
 
+  // lista processos organizada por tempo de chegada
   const processos: Processo[] = entradaProcessos
     .map((p, index) => criarProcesso(p, index + 1))
     .sort((a, b) => a.creationTime - b.creationTime); // Ordena por chegada
 
   let tempoAtual = 0;
   let processosConcluidosCont = 0;
-  let processoAtual: Processo | null = null;
   let trocasContexto = 0; 
   let filaDeProntos: Processo[] = [];
   let processosConcluidos: Processo[] = [];
   const diagramaTempo: { time: number; processId: number | null }[] = [];
-  const poolDeChegada = []; // Cópia para consumir
+  const poolDeChegada = [...processos]; // Cópia para consumir
   const quantum = config.quantum;
 
   
   while (processosConcluidosCont < processos.length){
-    //processos.forEach((p) => {
-    // if(p.creationTime === tempoAtual){ 
-    //   filaDeProntos.push(p);
-    //   processos.shift();
-    // }
-    // });
-
-    while (processos.length > 0 && processos[0].creationTime <= tempoAtual) {
-      filaDeProntos.push(processos.shift()!);
+    
+    // verifica se algum processo novo chegou no tempo atual
+    while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
+      filaDeProntos.push(poolDeChegada.shift()!);
     }
 
+    // escolha do processo
     if(filaDeProntos.length > 0){
-      const escolhido = filaDeProntos.shift();
+      const processoAtual = filaDeProntos.shift();
+      trocasContexto++;
 
-      if (escolhido) { // Verifica se existe um processo
-        trocasContexto++;
-        diagramaTempo.push({ time: tempoAtual, processId: escolhido ? escolhido.id : null });
-        escolhido.waitingTime = tempoAtual - escolhido.creationTime;
-        for(let q = quantum; q > 0; q--){
-          while (processos.length > 0 && processos[0].creationTime <= tempoAtual) {
-            filaDeProntos.push(processos.shift()!);
+      if (processoAtual) { // Verifica se existe um processo
+        
+        if (processoAtual.waitingTime === undefined) {
+          processoAtual.waitingTime = tempoAtual - processoAtual.creationTime;
+        }   
+        
+        // execução de acordo com o quantum
+        for (let q = 0; q < quantum && processoAtual.remainingTime > 0; q++) {
+          while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
+            filaDeProntos.push(poolDeChegada.shift()!);
           }
+          diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
           tempoAtual++;
+          processoAtual.remainingTime--;
         }
-        escolhido.remainingTime -= quantum; // ou o tempo que foi realmente executado
-
-        if(escolhido.remainingTime > 0) {
-          filaDeProntos.push(escolhido);
+        
+        // verifica se o processo atual acabou a execução
+        if(processoAtual.remainingTime > 0) {
+          filaDeProntos.push(processoAtual);
         }
         else {
           processosConcluidosCont++;
-          escolhido.completionTime = tempoAtual;
-          escolhido.turnaroundTime = escolhido.completionTime - escolhido.creationTime;
-          processosConcluidos.push(escolhido);
+          processoAtual.completionTime = tempoAtual;
+          processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
+          processosConcluidos.push(processoAtual);
         }
       }
+    } else {
+      // tempo ocioso
+      if (poolDeChegada.length > 0) {
+        const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
+        for (let i = 0; i < tempoOcioso; i++) {
+          diagramaTempo.push({ time: tempoAtual + i, processId: null });
+        }
+        tempoAtual = poolDeChegada[0].creationTime;
+      } else {
+        diagramaTempo.push({ time: tempoAtual, processId: null });
+        tempoAtual++;
+      }
+    }
+
+    if (tempoAtual > 100000) {
+      console.error("Tempo máximo de execução excedido");
+      break;
     }
 
   }
@@ -542,9 +561,118 @@ export function simularRR(entradaProcessos: ProcessoEntrada[], config: Configura
  * Simula o algoritmo Round-Robin com Prioridade e Envelhecimento (Aging).
  */
 export function simularPrioridadeRR(entradaProcessos: ProcessoEntrada[], config: ConfiguracaoEscalonador): ResultadoSimulacao {
+ 
   if (!config.quantum || config.quantum <= 0) {
-    throw new Error("Quantum inválido ou não fornecido.");
+      throw new Error("Quantum inválido ou não fornecido para Round-Robin.");
   }
-  // TODO: Implementar RR com Prioridade e Aging.
-  throw new Error(ERRO_NAO_IMPLEMENTADO);
+
+  // lista processos organizada por tempo de chegada
+  const processos: Processo[] = entradaProcessos
+    .map((p, index) => criarProcesso(p, index + 1))
+    .sort((a, b) => a.creationTime - b.creationTime); // Ordena por tempo de chegada
+
+  let tempoAtual = 0;
+  let processosConcluidosCont = 0;
+  let trocasContexto = 0; 
+  let filaDeProntos: Processo[] = [];
+  let processosConcluidos: Processo[] = [];
+  const diagramaTempo: { time: number; processId: number | null }[] = [];
+  const poolDeChegada = [...processos]; // Cópia para consumir
+  const quantum = config.quantum;
+
+  
+  while (processosConcluidosCont < processos.length){
+    
+    // verifica se algum processo chegou no tempo atual e coloca na fila de prontos
+    while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
+      filaDeProntos.push(poolDeChegada.shift()!);
+    }
+
+    if(filaDeProntos.length > 0){
+      // Encontra o processo com maior prioridade na filaDeProntos
+      let maxPriorityIndex = 0;
+      for(let i = 0; i < filaDeProntos.length; i++) {
+        const processo = filaDeProntos[i];
+        const processoMax = filaDeProntos[maxPriorityIndex];
+        if(processo.priorityMod > processoMax.priorityMod) {
+            maxPriorityIndex = i;
+        }
+      }
+
+      // Remove da filaDeProntos e obtém o processo com maior prioridade
+      let processoAtual = filaDeProntos.splice(maxPriorityIndex, 1)[0];
+
+      trocasContexto++;
+
+      if (processoAtual) { // Verifica se existe um processo
+
+        processoAtual.priorityMod = processoAtual.priority; //reseta a prioridade do processo escolhido para a inicial
+        
+        if (processoAtual.waitingTime === undefined) {
+          processoAtual.waitingTime = tempoAtual - processoAtual.creationTime;
+        }   
+        
+        // executa de acordo com o tamanho do quantum
+        for (let q = 0; q < quantum && processoAtual.remainingTime > 0; q++) {
+          
+          diagramaTempo.push({ time: tempoAtual, processId: processoAtual ? processoAtual.id : null });
+          tempoAtual++;
+          processoAtual.remainingTime--;
+
+          // verifica se chegou um processo novo no tempo atual
+          while (poolDeChegada.length > 0 && poolDeChegada[0].creationTime <= tempoAtual) {
+            filaDeProntos.push(poolDeChegada.shift()!);            
+          }
+        
+        }
+        
+        // verifica se o processo atual acabou a execução
+        if(processoAtual.remainingTime > 0) {
+          filaDeProntos.push(processoAtual);
+        }
+        else {
+          processosConcluidosCont++;
+          processoAtual.completionTime = tempoAtual;
+          processoAtual.turnaroundTime = processoAtual.completionTime - processoAtual.creationTime;
+          processosConcluidos.push(processoAtual);
+        }
+
+        // aumenta a prioridade dos processos após o quantum
+        filaDeProntos.forEach(p => { 
+            p.priorityMod += config.agingRate || 1;
+        });
+      }
+    } else {
+      // tempo ocioso
+      if (poolDeChegada.length > 0) {
+        const tempoOcioso = poolDeChegada[0].creationTime - tempoAtual;
+        for (let i = 0; i < tempoOcioso; i++) {
+          diagramaTempo.push({ time: tempoAtual + i, processId: null });
+        }
+        tempoAtual = poolDeChegada[0].creationTime;
+      } else {
+        diagramaTempo.push({ time: tempoAtual, processId: null });
+        tempoAtual++;
+      }
+    }
+
+    if (tempoAtual > 100000) {
+      console.error("Tempo máximo de execução excedido");
+      break;
+    }
+
+  }
+  
+  const totalTurnaround = processosConcluidos.reduce((sum, p) => sum + (p.turnaroundTime || 0), 0);
+  const totalWaiting = processosConcluidos.reduce((sum, p) => sum + (p.waitingTime || 0), 0);
+  
+  return {
+    metricas: {
+      averageTurnaroundTime: totalTurnaround / processosConcluidos.length,
+      averageWaitingTime: totalWaiting / processosConcluidos.length,
+      totalContextSwitches: trocasContexto,
+    },
+    diagramaTempo: diagramaTempo,
+    processos: processosConcluidos,
+  };
 }
